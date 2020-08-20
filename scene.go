@@ -9,23 +9,17 @@ import (
 
 type Scene struct {
 	Triangles []*Triangle
-	maxX      float64
-	maxY      float64
+	conf      *Conf
 }
 
-func (s *Scene) GenerateScene(maxX, maxY float64) {
-	s.maxX = maxX
-	s.maxY = maxY
-	nb := 300
-	for i := 0; i < nb; i++ {
-		triangle := s.CreateTriangle()
-
-		triangle.updateTriangleSprite()
-		s.Triangles = append(s.Triangles, triangle)
+func (s *Scene) GenerateScene(conf *Conf) {
+	s.conf = conf
+	for i := 0; i < conf.Nb; i++ {
+		s.CreateTriangle(getRandomPosition(s.conf.MaxX, s.conf.MaxY))
 	}
 }
 
-func (s *Scene) CreateTriangle() *Triangle {
+func (s *Scene) CreateTriangle(position pixel.Vec) {
 
 	min := 0.
 	max := 1.
@@ -56,10 +50,7 @@ func (s *Scene) CreateTriangle() *Triangle {
 		Color:            pixel.RGB(min+rand.Float64()*(max-min), min+rand.Float64()*(max-min), min+rand.Float64()*(max-min)),
 	}
 
-	min = 0.5
-	max = 3.
-
-	triangle.Speed = min + rand.Float64()*(max-min)
+	triangle.Speed = s.conf.MinSpeed + rand.Float64()*(s.conf.MaxSpeed-s.conf.MinSpeed)
 
 	triangle.RefreshCenter()
 	triangle.A.Position.X -= triangle.G.Position.X
@@ -70,16 +61,17 @@ func (s *Scene) CreateTriangle() *Triangle {
 	triangle.C.Position.Y -= triangle.G.Position.Y
 	triangle.RefreshCenter()
 
-	min = 0.
-	max = s.maxX
+	triangle.Translate(position)
+	s.Triangles = append(s.Triangles, triangle)
+	triangle.updateTriangleSprite()
+}
 
-	randX := min + rand.Float64()*(max-min)
-	max = s.maxY
-	randY := min + rand.Float64()*(max-min)
+func getRandomPosition(maxX, maxY float64) pixel.Vec {
+	min := 0.
 
-	triangle.Translate(pixel.Vec{randX, randY})
-
-	return triangle
+	randX := min + rand.Float64()*(maxX-min)
+	randY := min + rand.Float64()*(maxY-min)
+	return pixel.Vec{randX, randY}
 }
 
 func (s *Scene) dispatchPosition(vec pixel.Vec) {
@@ -89,8 +81,11 @@ func (s *Scene) dispatchPosition(vec pixel.Vec) {
 }
 
 func (s *Scene) CatchEvent(win *pixelgl.Window) {
+	s.conf.MaxX = win.Bounds().W()
+	s.conf.MaxY = win.Bounds().H()
 	if win.JustPressed(pixelgl.MouseButtonLeft) {
-		s.dispatchPosition(win.MousePosition())
+		s.CreateTriangle(win.MousePosition())
+		//s.dispatchPosition(win.MousePosition())
 	}
 }
 
